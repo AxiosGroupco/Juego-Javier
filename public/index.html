@@ -158,37 +158,6 @@ textarea{min-height:70px;resize:vertical;line-height:1.6}
   👤 Invitado — iniciar sesión
 </div>
 
-<!-- AUTH SCREEN -->
-<div class="screen" id="s-auth" style="max-width:380px;margin:0 auto;padding-top:3rem">
-  <div><div class="logo"><span class="c1">J</span><span class="c2">&</span><span class="c3">L</span> <span class="c4">Arcade</span></div><div class="tag">// identificate para guardar tu estilo</div></div>
-  <div class="auth-tabs">
-    <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Iniciar sesión</button>
-    <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Registrarse</button>
-  </div>
-  <!-- LOGIN -->
-  <div id="form-login" class="card">
-    <label class="il">Usuario</label>
-    <input id="login-user" type="text" placeholder="tu_usuario" maxlength="20" style="margin-bottom:8px">
-    <label class="il">Contraseña</label>
-    <input id="login-pass" type="password" placeholder="••••••" style="margin-bottom:10px">
-    <button class="btn b1" onclick="doLogin()">Entrar →</button>
-    <div id="login-err" class="err" style="margin-top:8px"></div>
-  </div>
-  <!-- REGISTER -->
-  <div id="form-register" class="card" style="display:none">
-    <label class="il">Usuario (sin espacios)</label>
-    <input id="reg-user" type="text" placeholder="tu_usuario" maxlength="20" style="margin-bottom:8px">
-    <label class="il">Nombre para mostrar</label>
-    <input id="reg-display" type="text" placeholder="Tu nombre" maxlength="30" style="margin-bottom:8px">
-    <label class="il">Contraseña (mín. 4 caracteres)</label>
-    <input id="reg-pass" type="password" placeholder="••••••" style="margin-bottom:10px">
-    <button class="btn b1" onclick="doRegister()">Crear cuenta →</button>
-    <div id="reg-err" class="err" style="margin-top:8px"></div>
-  </div>
-  <button class="btn" onclick="continueAsGuest()">Continuar como invitado →</button>
-  <div class="hint">Como invitado puedes jugar, pero la IA no aprenderá tu estilo de escritura entre sesiones.</div>
-</div>
-
 <div class="wrap">
 
 <!-- MENU -->
@@ -378,90 +347,6 @@ textarea{min-height:70px;resize:vertical;line-height:1.6}
 </div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ── AUTH ─────────────────────────────────────────────────────
-let currentUser = null;
-let authToken = localStorage.getItem('arcade_token');
-
-async function initAuth() {
-  if (!authToken) { show('s-auth'); return; }
-  try {
-    const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
-    if (!r.ok) throw new Error('invalid');
-    const { user } = await r.json();
-    currentUser = user;
-    socket.emit('auth', { token: authToken });
-    updateUserBadge();
-    show('s-menu');
-  } catch {
-    authToken = null;
-    localStorage.removeItem('arcade_token');
-    show('s-auth');
-  }
-}
-
-async function doLogin() {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  if (!username || !password) return showErr('auth-error', 'Completa todos los campos');
-  try {
-    const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username,password}) });
-    const data = await r.json();
-    if (!r.ok) return showErr('auth-error', data.error || 'Error');
-    authToken = data.token;
-    currentUser = data.user;
-    localStorage.setItem('arcade_token', authToken);
-    socket.emit('auth', { token: authToken });
-    updateUserBadge();
-    show('s-menu');
-  } catch { showErr('auth-error', 'Error de conexión'); }
-}
-
-async function doRegister() {
-  const displayName = document.getElementById('reg-display').value.trim();
-  const username = document.getElementById('reg-user').value.trim();
-  const password = document.getElementById('reg-pass').value;
-  if (!displayName || !username || !password) return showErr('auth-error', 'Completa todos los campos');
-  try {
-    const r = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username,displayName,password}) });
-    const data = await r.json();
-    if (!r.ok) return showErr('auth-error', data.error || 'Error');
-    authToken = data.token;
-    currentUser = data.user;
-    localStorage.setItem('arcade_token', authToken);
-    socket.emit('auth', { token: authToken });
-    updateUserBadge();
-    show('s-menu');
-  } catch { showErr('auth-error', 'Error de conexión'); }
-}
-
-function doLogout() {
-  authToken = null; currentUser = null;
-  localStorage.removeItem('arcade_token');
-  show('s-auth');
-}
-
-function updateUserBadge() {
-  const el = document.getElementById('user-badge-name');
-  if (el && currentUser) el.textContent = currentUser.displayName || currentUser.username;
-}
-
-async function loadGlobalLB() {
-  try {
-    const r = await fetch('/api/leaderboard');
-    const { leaderboard } = await r.json();
-    const c = document.getElementById('global-lb-content'); c.innerHTML = '';
-    if (!leaderboard.length) { c.innerHTML = '<div style="color:var(--mu);font-size:11px">Sin partidas aún</div>'; }
-    else leaderboard.forEach((p,i) => {
-      const d = document.createElement('div'); d.className = 'lb-r';
-      d.innerHTML = `<div class="lbrank ${i===0?'g':i===1?'s':''}">${i+1}</div><div class="lbn">${p.display_name}<div style="font-size:9px;color:var(--mu)">${p.games_played} partidas</div></div><div class="lbs">${p.total_score}</div>`;
-      c.appendChild(d);
-    });
-    show('s-global-lb');
-  } catch { showErr('setup-error', 'Error cargando tabla'); }
-}
-
-socket.on('auth_ok', ({user}) => { currentUser = user; updateUserBadge(); });
-
 // ── AUTH STATE ────────────────────────────────────────────────
 let currentUser = null;
 let authToken = null;
@@ -846,22 +731,12 @@ socket.on('error',(msg)=>{showErr('setup-error',msg);show('s-setup');});
 socket.on('player_left',()=>{closeModal();alert('El otro jugador se desconectó');show('s-menu');});
 socket.on('authenticated',({userId,username})=>{
   console.log('Socket authenticated as', username);
-  // Update style badge if user has history
-  fetch('/api/me',{headers:{Authorization:`Bearer ${authToken}`}})
-    .then(r=>r.json()).then(d=>{
-      if(d.user) {
-        const sb=document.getElementById('style-badge');
-        // Show badge after first game
-        if(sb) sb.style.display='inline-block';
-      }
-    }).catch(()=>{});
+  const sb=document.getElementById('style-badge');
+  if(sb) sb.style.display='inline-block';
 });
 
 // Init
 tryRestoreSession();
-
-// Initialize auth on page load
-initAuth();
 </script>
 </body>
 </html>
